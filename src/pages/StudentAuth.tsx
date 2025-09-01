@@ -1,26 +1,27 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState } from "react";
+import { useRouter } from "next/router";
+import { FaGoogle, FaFacebook } from "react-icons/fa";
+import Button from "$/components/Button";
+import AuthCard from "$/components/auth/AuthCard";
+import AuthTabs from "$/components/auth/AuthTabs";
+import AuthInput from "$/components/auth/AuthInput";
+import { supabase } from "$/integrations/supabase/client";
 
 const StudentAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("signin");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     name: "",
     studentId: "",
     year: "",
-    department: ""
+    department: "",
   });
-  const navigate = useNavigate();
+  const router = useRouter();
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  // Sign Up
+  const handleSignUp = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -29,34 +30,28 @@ const StudentAuth = () => {
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/student-portal`,
+          emailRedirectTo: `${window.location.origin}/StudentPortal`,
           data: {
             name: formData.name,
             student_id: formData.studentId,
             year: formData.year,
-            department: formData.department
-          }
-        }
+            department: formData.department,
+          },
+        },
       });
 
       if (authError) throw authError;
 
-      toast({
-        title: "Account created successfully!",
-        description: "Please check your email to verify your account.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
+      alert("Account created! Please check your email to verify.");
+    } catch (error) {
+      alert(`Error: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  // Sign In
+  const handleSignIn = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -68,140 +63,185 @@ const StudentAuth = () => {
 
       if (error) throw error;
 
-      navigate("/student-portal");
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
+      router.push("/StudentPortal");
+    } catch (error) {
+      alert(`Error: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // OAuth Login (Google, Facebook)
+  const handleOAuthLogin = async (provider) => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/StudentPortal`,
+      },
+    });
+
+    if (error) {
+      console.error(error);
+      alert(`Error: ${error.message}`);
+    } else {
+      console.log(`Redirecting to ${provider} login...`, data);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-primary">Student Portal</CardTitle>
-          <CardDescription>Sign in to order from canteen stalls</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Signing in..." : "Sign In"}
-                </Button>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="student-id">Student ID</Label>
-                  <Input
-                    id="student-id"
-                    type="text"
-                    placeholder="Enter your student ID"
-                    value={formData.studentId}
-                    onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="year">Year</Label>
-                    <Input
-                      id="year"
-                      type="number"
-                      placeholder="Year"
-                      value={formData.year}
-                      onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="department">Department</Label>
-                    <Input
-                      id="department"
-                      type="text"
-                      placeholder="Department"
-                      value={formData.department}
-                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="Create a password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Creating account..." : "Sign Up"}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <AuthCard
+        title="Student Portal"
+        description="Sign in to order from canteen stalls"
+      >
+        {/* Tabs */}
+        <div className="flex justify-center">
+          <AuthTabs
+            tabs={[
+              {
+                value: "signin",
+                label: "Sign In",
+                active: activeTab === "signin",
+                onClick: () => setActiveTab("signin"),
+              },
+              {
+                value: "signup",
+                label: "Sign Up",
+                active: activeTab === "signup",
+                onClick: () => setActiveTab("signup"),
+              },
+            ]}
+          />
+        </div>
+
+        {/* Sign In */}
+        {activeTab === "signin" ? (
+          <form onSubmit={handleSignIn} className="space-y-4 mt-6">
+            <AuthInput
+              label="Email"
+              type="email"
+              placeholder="Enter your email"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
+              required
+            />
+            <AuthInput
+              label="Password"
+              type="password"
+              placeholder="Enter your password"
+              value={formData.password}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+              required
+            />
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+        ) : (
+          /* Sign Up */
+          <form onSubmit={handleSignUp} className="space-y-4 mt-6">
+            <AuthInput
+              label="Full Name"
+              type="text"
+              placeholder="Enter your full name"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              required
+            />
+            <AuthInput
+              label="Student ID"
+              type="text"
+              placeholder="Enter your student ID"
+              value={formData.studentId}
+              onChange={(e) =>
+                setFormData({ ...formData, studentId: e.target.value })
+              }
+              required
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <AuthInput
+                label="Year"
+                type="number"
+                placeholder="Year"
+                value={formData.year}
+                onChange={(e) =>
+                  setFormData({ ...formData, year: e.target.value })
+                }
+                required
+              />
+              <AuthInput
+                label="Department"
+                type="text"
+                placeholder="Department"
+                value={formData.department}
+                onChange={(e) =>
+                  setFormData({ ...formData, department: e.target.value })
+                }
+                required
+              />
+            </div>
+            <AuthInput
+              label="Email"
+              type="email"
+              placeholder="Enter your email"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
+              required
+            />
+            <AuthInput
+              label="Password"
+              type="password"
+              placeholder="Create a password"
+              value={formData.password}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+              required
+            />
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? "Creating account..." : "Sign Up"}
+            </Button>
+          </form>
+        )}
+
+        {/* Social login buttons */}
+        <div className="mt-6 space-y-3">
+          <Button
+            onClick={() => handleOAuthLogin("google")}
+            variant="secondary"
+            icon={FaGoogle}
+            className="w-full"
+          >
+            Continue with Google
+          </Button>
+          <Button
+            onClick={() => handleOAuthLogin("facebook")}
+            variant="secondary"
+            icon={FaFacebook}
+            className="w-full"
+          >
+            Continue with Facebook
+          </Button>
+        </div>
+      </AuthCard>
     </div>
   );
 };
